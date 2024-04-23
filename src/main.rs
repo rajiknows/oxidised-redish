@@ -1,7 +1,8 @@
 // Uncomment this block to pass the first stage
 use std::{
     io::{Read, Write},
-    net::TcpListener,
+    net::{TcpListener, TcpStream},
+    thread,
 };
 
 fn main() {
@@ -20,13 +21,10 @@ fn main() {
         match stream {
             Ok(mut _stream) => {
                 println!("accepted new connection");
-                loop {
-                    let mut buf = [0; 512];
-                    let bytes_read = _stream.read(&mut buf).expect("failed to read");
-                    if bytes_read > 0 {
-                        _stream.write_all("+PONG\r\n".as_bytes()).unwrap();
-                    }
-                }
+                handle_client(_stream);
+            }
+            Ok(mut _stream) => {
+                thread::spawn(|| handle_client(_stream));
             }
             Err(e) => {
                 println!("error: {}", e);
@@ -35,18 +33,24 @@ fn main() {
     }
 }
 
-/*pub fn handle_client(mut stream: TcpStream) {
+pub fn handle_client(mut stream: TcpStream) {
     let mut buf = [0; 512];
-    stream.write("")
     loop {
         let bytes_read = stream.read(&mut buf).expect("failed to read from client");
 
         if bytes_read == 0 {
             return;
         }
-
-        stream
-            .write_all(&buf[0..bytes_read])
-            .expect("failed to write to client");
+        let msg: String = String::from_utf8(buf.to_vec()).unwrap();
+        match msg.as_str() {
+            "ping" => {
+                stream.write_all("+PONG\r\n".as_bytes()).unwrap();
+            }
+            _ => {
+                stream
+                    .write_all(&buf[0..bytes_read])
+                    .expect("failed to write to client");
+            }
+        }
     }
-}*/
+}
