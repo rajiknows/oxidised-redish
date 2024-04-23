@@ -40,7 +40,6 @@ pub fn handle_client(mut stream: TcpStream) {
             return;
         }
         let msg: String = String::from_utf8(buf.to_vec()).unwrap();
-        println!("{}", msg);
         match msg.as_str() {
             "ping" => {
                 stream.write_all("+PONG\r\n".as_bytes()).unwrap();
