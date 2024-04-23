@@ -39,7 +39,8 @@ pub fn handle_client(mut stream: TcpStream) {
         if bytes_read == 0 {
             return;
         }
-        let msg: String = String::from_utf8(buf.to_vec()).unwrap();
+        let cmd = buf[2];
+        let msg: String = cmd.to_string();
         match msg.as_str() {
             "ping" => {
                 stream.write_all("+PONG\r\n".as_bytes()).unwrap();
