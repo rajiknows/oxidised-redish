@@ -21,10 +21,7 @@ fn main() {
         match stream {
             Ok(mut _stream) => {
                 println!("accepted new connection");
-                handle_client(_stream);
-            }
-            Ok(mut _stream) => {
-                thread::spawn(|| handle_client(_stream));
+                thread::spawn(move || handle_client(_stream));
             }
             Err(e) => {
                 println!("error: {}", e);
