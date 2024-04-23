@@ -31,9 +31,9 @@ fn main() {
 }
 
 pub fn handle_client(mut stream: TcpStream) {
-    loop {
-        let mut buf = [0; 512];
+    let mut buf = [0; 512];
 
+    loop {
         let bytes_read = stream.read(&mut buf).expect("failed to read from client");
 
         if bytes_read == 0 {
