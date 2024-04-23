@@ -31,8 +31,9 @@ fn main() {
 }
 
 pub fn handle_client(mut stream: TcpStream) {
-    let mut buf = [0; 512];
     loop {
+        let mut buf = [0; 512];
+
         let bytes_read = stream.read(&mut buf).expect("failed to read from client");
 
         if bytes_read == 0 {
@@ -44,9 +45,7 @@ pub fn handle_client(mut stream: TcpStream) {
                 stream.write_all("+PONG\r\n".as_bytes()).unwrap();
             }
             _ => {
-                stream
-                    .write_all(&buf[0..bytes_read])
-                    .expect("failed to write to client");
+                stream.write_all("".as_bytes()).unwrap();
             }
         }
     }
