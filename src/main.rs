@@ -39,14 +39,15 @@ pub fn handle_client(mut stream: TcpStream) {
         if bytes_read == 0 {
             return;
         }
-        let cmd = buf[2];
-        let msg: String = cmd.to_string();
-        match msg.as_str() {
-            "ping" => {
+
+        let cmd = buf[2] as char;
+
+        match cmd {
+            'p' => {
                 stream.write_all("+PONG\r\n".as_bytes()).unwrap();
             }
             _ => {
-                stream.write_all("".as_bytes()).unwrap();
+                stream.write_all("Invalid command\r\n".as_bytes()).unwrap();
             }
         }
     }
