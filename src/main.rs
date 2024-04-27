@@ -1,4 +1,6 @@
 use std::{
+    collections::HashMap,
+    fmt::format,
     io::{Read, Write},
     net::{TcpListener, TcpStream},
     thread,
@@ -6,11 +8,12 @@ use std::{
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
+    let mut memory_map = HashMap::new();
 
     for stream in listener.incoming() {
         thread::spawn(move || match stream {
             Ok(mut stream) => {
-                handle_connection(&mut stream);
+                handle_connection(&mut stream, &mut memory_map);
             }
             Err(e) => {
                 println!("error {}", e);
@@ -19,13 +22,13 @@ fn main() {
     }
 }
 
-fn handle_connection(stream: &mut TcpStream) {
+fn handle_connection(stream: &mut TcpStream, memory_map: &mut HashMap<Option<&str>, Option<&str>>) {
     loop {
         let mut buf = [0; 512];
         let _bytes_read = stream.read(&mut buf);
 
         let byte_slice = std::str::from_utf8(&buf[..]).expect("could not convert byte to slice");
-        redis_parser(byte_slice, stream);
+        redis_parser(byte_slice, stream, &mut memory_map);
 
         /*match bytes_read {
             Ok(n) => {
@@ -48,7 +51,11 @@ fn handle_connection(stream: &mut TcpStream) {
     }
 }
 
-fn redis_parser(byte_slice: &str, stream: &mut TcpStream) {
+fn redis_parser(
+    byte_slice: &str,
+    stream: &mut TcpStream,
+    memory_map: &mut HashMap<Option<&str>, Option<&str>>,
+) {
     let mut instruction_array = Vec::new();
 
     if byte_slice.starts_with('*') {
@@ -86,6 +93,23 @@ fn redis_parser(byte_slice: &str, stream: &mut TcpStream) {
                     let _ = stream.write_all(b"-ERR Missing argument for ECHO\r\n");
                 }
             }
+            "SET" => {
+                memory_map.insert(
+                    instruction_array.get(1).cloned(),
+                    instruction_array.get(2).cloned(),
+                );
+            }
+            "GET" => match memory_map.get(instruction_array.get(1).cloned()) {
+                Some(Some(val)) => {
+                    let _ = stream.write_all(format!("+{}\r\n", val).as_bytes());
+                }
+                Some(None) => {
+                    let _ = stream.write_all(b"-ERR Missing value for GET\r\n");
+                }
+                None => {
+                    let _ = stream.write_all(b"-ERR Key not found for GET\r\n");
+                }
+            },
             _ => {
                 let _ = stream.write_all(b"-ERR Unknown command\r\n");
             }
