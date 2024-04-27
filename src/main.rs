@@ -18,11 +18,10 @@ fn main() {
         });
     }
 }
-#[warn(unused_variables)]
+
 fn handle_connection(stream: &mut TcpStream) {
     loop {
-        let mut buf = [0; 512];
-        let bytes_read = stream.read(&mut buf);
+        let buf = [0; 512];
 
         let byte_slice = std::str::from_utf8(&buf[..]).expect("could not convert byte to slice");
         redis_parser(byte_slice, stream);
