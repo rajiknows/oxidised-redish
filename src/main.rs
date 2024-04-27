@@ -24,6 +24,10 @@ fn handle_connection(mut stream: TcpStream) {
         let buf = &mut [0; 512];
         let bytes_read = stream.read(buf);
 
+        let recieved_string = String::from_utf8_lossy(buf);
+        println!("the string recieved is {}",recieved_string);
+
+
         match bytes_read {
             Ok(n) => {
                 if n == 0 {
@@ -44,3 +48,5 @@ fn handle_connection(mut stream: TcpStream) {
         }
     }
 }
+
+fn redis_protocol_parser()
