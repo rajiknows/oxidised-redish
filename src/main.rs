@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    fmt::format,
     io::{Read, Write},
     net::{TcpListener, TcpStream},
     thread,
@@ -8,12 +7,11 @@ use std::{
 
 fn main() {
     let listener = TcpListener::bind("127.0.0.1:6379").unwrap();
-    let mut memory_map = HashMap::new();
 
     for stream in listener.incoming() {
         thread::spawn(move || match stream {
             Ok(mut stream) => {
-                handle_connection(&mut stream, &mut memory_map);
+                handle_connection(&mut stream);
             }
             Err(e) => {
                 println!("error {}", e);
@@ -22,39 +20,22 @@ fn main() {
     }
 }
 
-fn handle_connection(stream: &mut TcpStream, memory_map: &mut HashMap<Option<&str>, Option<&str>>) {
+fn handle_connection(stream: &mut TcpStream) {
+    let mut memory_map = HashMap::new();
+
     loop {
         let mut buf = [0; 512];
         let _bytes_read = stream.read(&mut buf);
 
         let byte_slice = std::str::from_utf8(&buf[..]).expect("could not convert byte to slice");
         redis_parser(byte_slice, stream, &mut memory_map);
-
-        /*match bytes_read {
-            Ok(n) => {
-                if n == 0 {
-                    break;
-                }
-
-                let res = stream.write_all(b"+PONG\r\n");
-                match res {
-                    Ok(_) => {}
-                    Err(e) => {
-                        println!("error {}", e);
-                    }
-                }
-            }
-            Err(e) => {
-                println!("error {}", e);
-            }
-        }*/
     }
 }
 
 fn redis_parser(
     byte_slice: &str,
     stream: &mut TcpStream,
-    memory_map: &mut HashMap<Option<&str>, Option<&str>>,
+    memory_map: &mut HashMap<Option<String>, Option<String>>,
 ) {
     let mut instruction_array = Vec::new();
 
@@ -71,7 +52,7 @@ fn redis_parser(
                             .parse()
                             .expect("Invalid RESP format");
                         let arg = &remaining_bytes[index + 2..index + 2 + arg_len];
-                        instruction_array.push(arg);
+                        instruction_array.push(arg.to_string());
                         remaining_bytes = &remaining_bytes[index + 2 + arg_len + 2..];
                     }
                 }
@@ -94,12 +75,15 @@ fn redis_parser(
                 }
             }
             "SET" => {
-                memory_map.insert(
-                    instruction_array.get(1).cloned(),
-                    instruction_array.get(2).cloned(),
-                );
+                if let (Some(key), Some(value)) =
+                    (instruction_array.get(1), instruction_array.get(2))
+                {
+                    memory_map.insert(Some(key.to_string()), Some(value.to_string()));
+                } else {
+                    let _ = stream.write_all(b"-ERR Missing arguments for SET\r\n");
+                }
             }
-            "GET" => match memory_map.get(instruction_array.get(1).cloned()) {
+            "GET" => match memory_map.get(&instruction_array.get(1).cloned()) {
                 Some(Some(val)) => {
                     let _ = stream.write_all(format!("+{}\r\n", val).as_bytes());
                 }
