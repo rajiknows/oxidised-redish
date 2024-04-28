@@ -79,6 +79,7 @@ fn redis_parser(
                     (instruction_array.get(1), instruction_array.get(2))
                 {
                     memory_map.insert(Some(key.to_string()), Some(value.to_string()));
+                    let _ = stream.write_all("+OK\r\n".as_bytes());
                 } else {
                     let _ = stream.write_all(b"-ERR Missing arguments for SET\r\n");
                 }
